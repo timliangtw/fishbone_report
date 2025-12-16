@@ -606,8 +606,12 @@ const App = () => {
     const [lastShortcutAction, setLastShortcutAction] = useState('');
     const latestRef = useRef(null);
     const handleSaveCallRef = useRef(null);
+    const allowDragRef = useRef(false);
     // Keep the newest snapshot for saving (prevents intermittent "saved old state" from stale closures)
-    latestRef.current = { problem, problemDesc, rows, notes, baseFontSize };
+
+    useEffect(() => {
+        latestRef.current = { problem, problemDesc, rows, notes, baseFontSize };
+    }, [problem, problemDesc, rows, notes, baseFontSize]);
 
     useEffect(() => {
         // Restore local data
@@ -723,10 +727,20 @@ const App = () => {
     }, []);
 
     const handleDragStart = (e, index) => {
+        // Only allow dragging if initiated from the handle (via validation ref)
+        if (!allowDragRef.current) {
+            e.preventDefault();
+            return;
+        }
         setDraggedRowIndex(index);
         e.dataTransfer.effectAllowed = "move";
-        // Make the drag transparent/ghost-like if desired, or simpler:
-        // e.dataTransfer.setDragImage(e.target, 0, 0); 
+        // Required for Firefox and some other browsers to acknowledge the drag
+        e.dataTransfer.setData('text/plain', index);
+    };
+
+    const handleDragEnd = () => {
+        setDraggedRowIndex(null);
+        allowDragRef.current = false;
     };
 
     const handleDragOver = (e, index) => {
@@ -1313,10 +1327,15 @@ const App = () => {
                                         className={`group hover:bg-slate-50 transition-colors ${highlightRowId === row.id ? 'bg-yellow-100 ring-2 ring-yellow-300' : ''}`}
                                         draggable
                                         onDragStart={(e) => handleDragStart(e, index)}
+                                        onDragEnd={handleDragEnd}
                                         onDragOver={(e) => handleDragOver(e, index)}
                                         onDrop={(e) => handleDrop(e, index)}
                                     >
-                                        <td className="p-2 align-middle text-center cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600">
+                                        <td
+                                            className="p-2 align-middle text-center cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 drag-handle touch-none"
+                                            onMouseDown={() => { allowDragRef.current = true; }}
+                                            onMouseUp={() => { allowDragRef.current = false; }}
+                                        >
                                             <GripVertical size={16} />
                                         </td>
                                         <td className="p-2 align-top text-center">
