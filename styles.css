@@ -39,6 +39,25 @@
             .print\:bg-white {
                 background-color: white !important;
             }
+
+            /* Prevent page breaks inside table rows */
+            tr,
+            td,
+            th {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
+            tbody {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
+            /* Hide browser default header/footer text if possible via margin */
+            @page {
+                size: auto;
+                margin: 5mm;
+            }
         }
 
         input[type=range] {

@@ -568,6 +568,12 @@ const App = () => {
     const [highlightRowId, setHighlightRowId] = useState(null);
     const [draggedRowIndex, setDraggedRowIndex] = useState(null);
 
+    // Report Metadata State
+    const [projectName, setProjectName] = useState("Root Cause Analysis");
+    const [owner, setOwner] = useState("");
+    const [reportStage, setReportStage] = useState("Draft");
+
+
     const embedded = useMemo(() => isEmbeddedFrame(), []);
     const nativeSaveAvailable = useMemo(() => {
         // showSaveFilePicker is not allowed in iframes; also needs secure context.
@@ -608,10 +614,9 @@ const App = () => {
     const handleSaveCallRef = useRef(null);
     const allowDragRef = useRef(false);
     // Keep the newest snapshot for saving (prevents intermittent "saved old state" from stale closures)
-
     useEffect(() => {
-        latestRef.current = { problem, problemDesc, rows, notes, baseFontSize };
-    }, [problem, problemDesc, rows, notes, baseFontSize]);
+        latestRef.current = { problem, problemDesc, rows, notes, baseFontSize, projectName, owner, reportStage };
+    }, [problem, problemDesc, rows, notes, baseFontSize, projectName, owner, reportStage]);
 
     useEffect(() => {
         // Restore local data
@@ -624,6 +629,10 @@ const App = () => {
                 if (parsed.rows) setRows(parsed.rows);
                 if (parsed.notes) setNotes(parsed.notes);
                 if (parsed.baseFontSize) setBaseFontSize(parsed.baseFontSize);
+                // Load metadata with fallbacks
+                if (parsed.projectName) setProjectName(parsed.projectName);
+                if (parsed.owner) setOwner(parsed.owner);
+                if (parsed.reportStage) setReportStage(parsed.reportStage);
             }
         } catch (_) {
             // ignore
@@ -785,6 +794,9 @@ const App = () => {
             rows: s.rows,
             notes: s.notes,
             baseFontSize: s.baseFontSize,
+            projectName: s.projectName,
+            owner: s.owner,
+            reportStage: s.reportStage,
             version: "3.8-SaveConsistency",
             exportedAt: new Date().toISOString(),
         };
@@ -851,6 +863,9 @@ const App = () => {
         if (data.rows) setRows(data.rows);
         if (data.notes) setNotes(data.notes);
         if (data.baseFontSize) setBaseFontSize(data.baseFontSize);
+        if (data.projectName) setProjectName(data.projectName);
+        if (data.owner) setOwner(data.owner);
+        if (data.reportStage) setReportStage(data.reportStage);
     };
 
     const pulseToast = (text) => {
@@ -929,6 +944,12 @@ const App = () => {
                 if (data.rows) setRows(data.rows);
                 if (data.notes) setNotes(data.notes);
                 if (data.baseFontSize) setBaseFontSize(data.baseFontSize);
+                // Load metadata with fallbacks
+                if (data.projectName) setProjectName(data.projectName);
+                if (data.owner) setOwner(data.owner);
+                if (data.reportStage) setReportStage(data.reportStage);
+
+                pulseToast('Loaded successfully');
             } catch (err) {
                 alert('Invalid file');
             }
@@ -1041,8 +1062,10 @@ const App = () => {
         });
 
         const verticalPadding = 150;
-        const spineY = maxTopHeight + verticalPadding;
-        const dynamicTotalHeight = spineY + maxBottomHeight + verticalPadding;
+        const headerHeight = 100 * s;
+        const footerHeight = 60 * s;
+        const spineY = maxTopHeight + verticalPadding + headerHeight;
+        const dynamicTotalHeight = spineY + maxBottomHeight + verticalPadding + footerHeight;
 
         // Dynamic Horizontal Layout
         // We calculate positions from Right (Head) to Left (Tail)
@@ -1126,6 +1149,18 @@ const App = () => {
         const requiredWidth = dynamicHeadX + headW + 250;
 
         const elements = [];
+
+        // --- Report Header (Project Name) ---
+        elements.push(
+            <text key="header-title" x="50" y={80 * s} fontSize={36 * s} fontWeight="bold" fill="#1e293b" fontFamily="sans-serif">
+                {projectName}
+            </text>
+        );
+        elements.push(
+            <line key="header-line" x1="50" y1={100 * s} x2={requiredWidth - 50} y2={100 * s} stroke="#e2e8f0" strokeWidth={2 * s} />
+        );
+
+        // --- Fishbone Body ---
 
         elements.push(<path key="tail" d={`M ${spineStartX} ${spineY} L ${spineStartX - 60} ${spineY - 50} Q ${spineStartX - 40} ${spineY} ${spineStartX - 60} ${spineY + 50} Z`} fill="#3b82f6" opacity="0.8" />);
         elements.push(<line key="spine" x1={spineStartX} y1={spineY} x2={dynamicHeadX} y2={spineY} stroke="#475569" strokeWidth={6 * s} strokeLinecap="round" />);
@@ -1216,12 +1251,31 @@ const App = () => {
             });
         });
 
+        // --- Report Footer ---
+        const footerY = dynamicTotalHeight - (20 * s);
+        const dateStr = new Date().toLocaleDateString('zh-TW');
+
+        elements.push(
+            <g key="footer">
+                <line x1="50" y1={footerY - (30 * s)} x2={requiredWidth - 50} y2={footerY - (30 * s)} stroke="#e2e8f0" strokeWidth={1 * s} />
+                <text x="50" y={footerY} fontSize={14 * s} fill="#64748b">
+                    Generated: {dateStr}
+                </text>
+                <text x={requiredWidth / 2} y={footerY} textAnchor="middle" fontSize={14 * s} fill="#64748b">
+                    {owner ? `Owner: ${owner}` : ''}
+                </text>
+                <text x={requiredWidth - 50} y={footerY} textAnchor="end" fontSize={14 * s} fontWeight="bold" fill={reportStage === 'Final' ? '#059669' : '#d97706'}>
+                    {reportStage} Ver.
+                </text>
+            </g>
+        );
+
         return {
             elements,
             totalWidth: Math.max(1200, requiredWidth),
             totalHeight: Math.max(750, dynamicTotalHeight)
         };
-    }, [fishboneStructure, layoutConfig, problem, scrollToRow]);
+    }, [fishboneStructure, layoutConfig, problem, scrollToRow, projectName, owner, reportStage]);
 
     useEffect(() => {
         const canvasEl = canvasRef.current;
@@ -1301,6 +1355,45 @@ const App = () => {
 
             <div className="flex-1 flex flex-col p-6 gap-6 max-w-[98%] mx-auto w-full print:p-0">
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col justify-center gap-3 print:hidden">
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Report Metadata</label>
+                        <div className="space-y-3">
+                            <div>
+                                <label className="block text-xs text-slate-400 mb-1">Project Name</label>
+                                <input
+                                    type="text"
+                                    value={projectName}
+                                    onChange={(e) => setProjectName(e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700"
+                                    placeholder="Enter Project Name..."
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs text-slate-400 mb-1">Owner</label>
+                                    <input
+                                        type="text"
+                                        value={owner}
+                                        onChange={(e) => setOwner(e.target.value)}
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="Name..."
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-slate-400 mb-1">Status</label>
+                                    <select
+                                        value={reportStage}
+                                        onChange={(e) => setReportStage(e.target.value)}
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                    >
+                                        <option value="Draft">Draft</option>
+                                        <option value="Final">Final</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="w-full">
                         <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Problem Title (Main Effect)</label>
                         <input type="text" value={problem} onChange={(e) => setProblem(e.target.value)} className="w-full bg-transparent font-bold text-slate-800 text-2xl outline-none border-b border-transparent focus:border-blue-500 transition-colors placeholder-slate-300" placeholder="Enter the main problem here..." />
