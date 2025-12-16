@@ -558,7 +558,7 @@ const App = () => {
     const [rows, setRows] = useState(DEMO_DATA);
     const [notes, setNotes] = useState("<div>Notes...</div>");
     const [scale, setScale] = useState(1);
-    const [baseFontSize, setBaseFontSize] = useState(14);
+    const [baseFontSize, setBaseFontSize] = useState(29);
     const [pan, setPan] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -1011,6 +1011,8 @@ const App = () => {
             if (isTop) maxTopHeight = Math.max(maxTopHeight, boneLength);
             else maxBottomHeight = Math.max(maxBottomHeight, boneLength);
 
+            let maxCauseLen = 0;
+
             const causesWithLayout = cat.causes.map(cause => {
                 let currentPos = 40 * s;
                 const factorsWithPos = cause.factors.map((f) => {
@@ -1025,45 +1027,99 @@ const App = () => {
                 });
                 const totalLen = currentPos + (40 * s);
                 const causeTextW = getTextWidth(cause.name, fontSize);
+
+                // Effective length including text
                 const finalLen = Math.max(totalLen, causeTextW + (60 * s));
+
+                // Track max length for this category to prevent horizontal overlap
+                if (finalLen > maxCauseLen) maxCauseLen = finalLen;
+
                 return { ...cause, factors: factorsWithPos, totalLen: finalLen };
             });
 
-            return { ...cat, causes: causesWithLayout, boneLength, isTop };
+            return { ...cat, causes: causesWithLayout, boneLength, isTop, maxCauseLen };
         });
 
         const verticalPadding = 150;
         const spineY = maxTopHeight + verticalPadding;
         const dynamicTotalHeight = spineY + maxBottomHeight + verticalPadding;
 
-        let maxCauseLenInFirstCat = 0;
-        if (categoriesWithLayout.length > 0) {
-            categoriesWithLayout[0].causes.forEach(c => {
-                if (c.totalLen > maxCauseLenInFirstCat) maxCauseLenInFirstCat = c.totalLen;
-            });
-        }
+        // Dynamic Horizontal Layout
+        // We calculate positions from Right (Head) to Left (Tail)
+        // making sure each category has enough space based on its content.
 
         const problemTextWidth = getTextWidth(problem, problemFontSize);
         const minHeadW = 280;
         const dynamicHeadW = Math.max(minHeadW, problemTextWidth + 100);
 
-        const headGap = Math.max(260 * s, maxCauseLenInFirstCat + 80);
-        const rawDynamicHeadX = Math.max(
-            1200 - 250,
-            200 + categoriesWithLayout.length * categorySpacing
-        );
+        // Gap required for the FIRST category (closest to head)
+        // It needs to clear the Head.
+        // Index 0 causes extend RIGHT.
+        const firstCatMaxLen = categoriesWithLayout.length > 0 ? categoriesWithLayout[0].maxCauseLen : 0;
+        const headGap = Math.max(260 * s, firstCatMaxLen + (100 * s));
 
-        const leftmostBoneRawX = rawDynamicHeadX - headGap - ((categoriesWithLayout.length - 1) * categorySpacing);
-        const safeLeftMargin = 200;
-        let shiftRight = 0;
-        if (leftmostBoneRawX < safeLeftMargin) {
-            shiftRight = safeLeftMargin - leftmostBoneRawX;
-        }
+        // Calculate absolute X positions (relative to 0 at Head connection)
+        const xPositions = [];
+        let currentXCursor = 0;
 
-        const dynamicHeadX = rawDynamicHeadX + shiftRight;
-        const firstBoneX = dynamicHeadX - headGap;
-        const lastBoneX = firstBoneX - ((categoriesWithLayout.length - 1) * categorySpacing);
-        const spineStartX = lastBoneX - 100;
+        categoriesWithLayout.forEach((cat, i) => {
+            // How much space does this category need to not hit the previous one?
+            // If i=0, it hits the head (handled by headGap later).
+            // If i>0, it hits Cat[i-1].
+            // Cat[i] causes extend RIGHT.
+
+            // We use the configured categorySpacing as a BASE minimum, 
+            // but expand if content is wide.
+            let gap = categorySpacing;
+
+            // Content-aware expansion:
+            // Ensure gap is at least maxCauseLen + padding
+            const contentGap = cat.maxCauseLen + (80 * s);
+            gap = Math.max(gap, contentGap);
+
+            currentXCursor -= gap;
+            xPositions[i] = currentXCursor;
+        });
+
+        // Determine where Head starts
+        // We want the total width to fit in at least 1200 or more
+        // currentXCursor is the left-most position (negative).
+        const totalContentWidth = Math.abs(currentXCursor) + headGap + dynamicHeadW + 300;
+        const startX = Math.max(200, 100 + Math.abs(currentXCursor) + headGap); // Shift everything right so left-most is visible
+
+        const dynamicHeadX = startX;
+        const spineEndX = startX;
+        const firstBoneX = startX - headGap;
+
+        // Map relative positions to absolute
+        const finalCategoryPositions = xPositions.map(x => firstBoneX + x + categorySpacing /* adjustment for the loop logic diff */);
+
+        // Re-calculate simpler:
+        // xPositions[0] is -gap0. We want Cat0 at (HeadX - headGap).
+        // Actually, let's just use the cursor logic directly:
+        const finalPositions = [];
+        let curX = dynamicHeadX - headGap;
+        categoriesWithLayout.forEach((cat, i) => {
+            finalPositions[i] = curX;
+
+            // Calculate gap for NEXT loop
+            if (i < categoriesWithLayout.length - 1) {
+                const nextCat = categoriesWithLayout[i + 1];
+                // Gap is determined by NEXT category's reach towards THIS one?
+                // No, causes extend RIGHT. 
+                // So Cat[i+1] extends towards Cat[i].
+                // We need Cat[i+1] to be far enough LEFT so its causes don't hit Cat[i]'s bone.
+
+                let gap = categorySpacing;
+                const nextContentGap = nextCat.maxCauseLen + (80 * s);
+                gap = Math.max(gap, nextContentGap);
+
+                curX -= gap;
+            }
+        });
+
+        const lastCatX = finalPositions[finalPositions.length - 1] || (dynamicHeadX - 200);
+        const spineStartX = lastCatX - 150;
 
         const headW = dynamicHeadW * headScale;
         const headH = 140 * headScale;
@@ -1095,9 +1151,8 @@ const App = () => {
             </g>
         );
 
-        let currentX = firstBoneX;
-
         categoriesWithLayout.forEach((cat, index) => {
+            const currentX = finalPositions[index];
             const { isTop, boneLength, causes } = cat;
             const endY = isTop ? spineY - boneLength : spineY + boneLength;
             const boneEndX = currentX - (boneLength * 0.45);
@@ -1159,8 +1214,6 @@ const App = () => {
 
                 distFromSpine += verticalBranchGap;
             });
-
-            currentX -= categorySpacing;
         });
 
         return {
