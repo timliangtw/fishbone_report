@@ -1,0 +1,151 @@
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f5f5f7;
+            color: #1d1d1f;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        @media print {
+            body {
+                background-color: white;
+            }
+
+            .print\:hidden {
+                display: none !important;
+            }
+
+            .print\:p-0 {
+                padding: 0 !important;
+            }
+
+            .print\:shadow-none {
+                box-shadow: none !important;
+            }
+
+            .print\:border-none {
+                border: none !important;
+            }
+
+            .print\:bg-white {
+                background-color: white !important;
+            }
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+
+        /* Editor Styles */
+        .editor-content img {
+            cursor: pointer;
+            transition: outline 0.2s;
+        }
+
+        .editor-content img:hover {
+            outline: 2px solid #94a3b8;
+        }
+
+        .editor-content img.selected {
+            outline: 3px solid #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+        }
+
+        /* Quill polish to match our UI */
+        .ql-toolbar.ql-snow {
+            border: none;
+            padding: 0;
+        }
+
+        .ql-container.ql-snow {
+            border: none;
+        }
+
+        .ql-editor {
+            padding: 24px;
+            min-height: 150px;
+            color: #334155;
+        }
+
+        .ql-editor.ql-blank::before {
+            color: #94a3b8;
+            font-style: normal;
+        }
+
+        .ql-toolbar button,
+        .ql-toolbar .ql-picker-label {
+            border-radius: 10px;
+        }
+
+        .ql-toolbar button:hover,
+        .ql-toolbar .ql-picker-label:hover {
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .ql-toolbar button.ql-active,
+        .ql-toolbar .ql-picker-label.ql-active {
+            background: rgba(59, 130, 246, 0.12);
+        }
+
+        /* Small error banner (helps debug when console is hidden) */
+        #error-banner {
+            display: none;
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            right: 12px;
+            z-index: 999999;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: rgba(254, 226, 226, 0.95);
+            border: 1px solid #fecaca;
+            color: #7f1d1d;
+            font-size: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(6px);
+        }
+
+        #error-banner .title {
+            font-weight: 800;
+            margin-right: 8px;
+        }
+
+        #error-banner .mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+
+        #error-banner button {
+            margin-left: 10px;
+            font-weight: 700;
+            color: #7f1d1d;
+        }
