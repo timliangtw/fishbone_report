@@ -35,6 +35,7 @@ const FileText = ({ size = 20 }) => <svg width={size} height={size} viewBox="0 0
 const Type = ({ size = 20 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 7 4 4 20 4 20 7" /><line x1="9" y1="20" x2="15" y2="20" /><line x1="12" y1="4" x2="12" y2="20" /></svg>;
 const Star = ({ size = 16, filled = false }) => <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? "#ea580c" : "none"} stroke={filled ? "#ea580c" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>;
 const Check = ({ size = 16 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>;
+const GripVertical = ({ size = 20 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1" /><circle cx="9" cy="5" r="1" /><circle cx="9" cy="19" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="15" cy="5" r="1" /><circle cx="15" cy="19" r="1" /></svg>;
 
 // Editor Icons (kept; not used directly with Quill toolbar)
 const BoldIcon = () => <span className="font-bold font-serif">B</span>;
@@ -565,6 +566,7 @@ const App = () => {
     const [saveHandle, setSaveHandle] = useState(null);
     const [saveTargetName, setSaveTargetName] = useState('');
     const [highlightRowId, setHighlightRowId] = useState(null);
+    const [draggedRowIndex, setDraggedRowIndex] = useState(null);
 
     const embedded = useMemo(() => isEmbeddedFrame(), []);
     const nativeSaveAvailable = useMemo(() => {
@@ -719,6 +721,29 @@ const App = () => {
         }
         highlightTimeoutRef.current = setTimeout(() => setHighlightRowId(null), 1800);
     }, []);
+
+    const handleDragStart = (e, index) => {
+        setDraggedRowIndex(index);
+        e.dataTransfer.effectAllowed = "move";
+        // Make the drag transparent/ghost-like if desired, or simpler:
+        // e.dataTransfer.setDragImage(e.target, 0, 0); 
+    };
+
+    const handleDragOver = (e, index) => {
+        e.preventDefault(); // Necessary to allow dropping
+        e.dataTransfer.dropEffect = "move";
+    };
+
+    const handleDrop = (e, targetIndex) => {
+        e.preventDefault();
+        if (draggedRowIndex === null || draggedRowIndex === targetIndex) return;
+
+        const newRows = [...rows];
+        const [draggedItem] = newRows.splice(draggedRowIndex, 1);
+        newRows.splice(targetIndex, 0, draggedItem);
+        setRows(newRows);
+        setDraggedRowIndex(null);
+    };
 
     const handleRowChange = (id, field, value) => setRows(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
     const insertRowAfter = (index) => {
@@ -1269,6 +1294,7 @@ const App = () => {
                         <table className="w-full text-left text-sm border-collapse min-w-[1200px]">
                             <thead>
                                 <tr className="border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
+                                    <th className="py-3 px-2 w-[30px] text-center"></th>
                                     <th className="py-3 px-2 w-[4%] text-center">Priority</th>
                                     <th className="py-3 px-2 w-[10%]">Primary Bone (Category)</th>
                                     <th className="py-3 px-2 w-[12%]">Secondary Bone (Cause)</th>
@@ -1281,7 +1307,18 @@ const App = () => {
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {rows.map((row, index) => (
-                                    <tr id={`verify-row-${row.id}`} key={row.id} className={`group hover:bg-slate-50 transition-colors ${highlightRowId === row.id ? 'bg-yellow-100 ring-2 ring-yellow-300' : ''}`}>
+                                    <tr
+                                        id={`verify-row-${row.id}`}
+                                        key={row.id}
+                                        className={`group hover:bg-slate-50 transition-colors ${highlightRowId === row.id ? 'bg-yellow-100 ring-2 ring-yellow-300' : ''}`}
+                                        draggable
+                                        onDragStart={(e) => handleDragStart(e, index)}
+                                        onDragOver={(e) => handleDragOver(e, index)}
+                                        onDrop={(e) => handleDrop(e, index)}
+                                    >
+                                        <td className="p-2 align-middle text-center cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600">
+                                            <GripVertical size={16} />
+                                        </td>
                                         <td className="p-2 align-top text-center">
                                             <button onClick={() => handleRowChange(row.id, 'isPriority', !row.isPriority)} className="p-1.5 hover:bg-orange-50 rounded-full transition">
                                                 <Star size={18} filled={row.isPriority} />
