@@ -215,7 +215,7 @@ const HoverTextarea = ({ value, onChange, placeholder }) => {
 };
 
 // --- RichTextEditor (Quill-based, avoids React infinite update loop) ---
-const RichTextEditor = ({ value, onChange }) => {
+const RichTextEditor = ({ value, onChange, className }) => {
     const toolbarRef = useRef(null);
     const editorHostRef = useRef(null);
     const quillRef = useRef(null);
@@ -452,7 +452,7 @@ const RichTextEditor = ({ value, onChange }) => {
     };
 
     return (
-        <div className="w-full bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-6 print:border-none print:shadow-none">
+        <div className={`w-full bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print:border-none print:shadow-none ${className || 'mt-6'}`}>
             {/* Toolbar (Quill) */}
             <div className="bg-slate-50 border-b border-slate-200 px-2 py-2 print:hidden select-none">
                 <div ref={toolbarRef} className="flex flex-wrap items-center gap-1">
@@ -1400,7 +1400,7 @@ const App = () => {
                     </div>
                     <div className="w-full">
                         <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Description / Context</label>
-                        <textarea value={problemDesc} onChange={(e) => setProblemDesc(e.target.value)} className="w-full bg-slate-50 rounded-lg p-2 text-sm text-slate-600 outline-none border border-slate-200 focus:border-blue-400 transition-colors resize-none" rows={2} placeholder="Detailed description of the problem..." />
+                        <RichTextEditor value={problemDesc} onChange={setProblemDesc} className="mt-1" />
                     </div>
                 </div>
 
@@ -1517,7 +1517,7 @@ const App = () => {
                         </table>
                     </div>
 
-                    <RichTextEditor value={notes} onChange={setNotes} />
+                    <RichTextEditor value={notes} onChange={setNotes} className="mt-6" />
                 </div>
             </div>
         </div>
